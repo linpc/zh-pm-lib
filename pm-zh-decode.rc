@@ -1,0 +1,142 @@
+# set syntax=procmail
+#########################
+# Program Settings	#
+#########################
+
+# INCLUDERC = $PMSRC/pm-jamime.rc
+# INCLUDERC = $PMSRC/pm-jamime-decode.rc
+
+FORMAIL		= ${FORMAIL:-"formail"}
+
+MMENCODE	= ${MMENCODE:-"mmencode"}
+MME_QP		= ${MME_QP:-"$MMENCODE -u -q"}	# decode Quoted printable
+MME_B64		= ${MME_B64:-"$MMENCODE -u -b"}	# decode base64
+
+PICONV		= ${PICONV:-"piconv"}
+CONV_B2U	= ${CONV_B2U:-"$PICONV -f big5 -t utf8"}
+CONV_G2U	= ${CONV_G2U:-"$PICONV -f gb2312 -t utf8"}
+
+ALNUM = "[a-fA-F0-9]"
+
+#########################
+# Extract Fields	#
+#########################
+
+# decoding subject passed test for:
+#   =?big5?Q?
+#   =?Big5?B? 
+#   =?UTF-8?B?
+#   =?gb2312?B?
+
+PM_ZH_SUBJECT = `formail -cxSubject: | /usr/local/bin/perl -MEncode -ne 'print encode("utf8", decode("MIME-Header", $_));'`
+PM_ZH_FROM = `formail -cxFrom: | /usr/local/bin/perl -MEncode -ne 'print encode("utf8", decode("MIME-Header", $_));'`
+
+# ``hf'' flag example : just filter HEADER, bypass BODY
+#:0 hf
+#| cat		# cat -n
+
+# We extract the mail BODY here
+# NOTE: any space is NOT allowed between ``variable'' and ``='' here, it's a special usage excluding environment variable assignmnet
+PM_ZH_BODY = ""
+
+:0 f
+PM_ZH_BODY=| formail -I "" | awk ' ! /^--[a-zA-Z0-9\-=._]+$/ && ! /^Content-[DT]/ && ! /^\tcharset=/ && ! /^\tboundary=/ && ! /^This is a multi-part message in MIME format\./ && ! /^MIME-Version: *[1-9.]+/ {print}' | tr -d \\n | tr -d \\r 
+
+# After parsing the mail BODY, we can remove any MIME header from it
+# NOTE: make sure not to put ``{print}'' in the start of line, the '{' symbol will cause a parsing error
+#PM_ZH_BODY= | $FORMAIL -I "" | awk '{print}'
+#	! /^--[a-zA-Z0-9\-=._]+$/ && \
+#	! /^Content-[DT]/ && \
+#	! /^\tcharset=/ && \
+#	! /^\tboundary=/ && \
+#	! /^This is a multi-part message in MIME format\./ && \
+#	! /^MIME-Version: *[1-9.]+/ {print}'
+
+# Now, we want to test if mail BODY has any Charset, Encoding settings...
+#
+# default charset, encoding
+
+E_CHARSET = "iso-8859-1"
+E_ENCODING = "7-bit"
+
+:0 hf
+* HB ?? ^Content-Type:
+{
+    # CHARSET
+    :0 hf
+    *$ B ?? ^(Content-Type:.*|	)charset *= *\"?\/[^\";]+
+    { E_CHARSET = $MATCH }
+
+    :0 Ehf
+    *$ H ?? ^(Content-Type:.*|	)charset *= *\"?\/[^\";]+
+    { E_CHARSET = $MATCH }
+
+    # ENCODING
+    :0 hf
+    *$ B ?? ^Content-Transfer-Encoding: +\/.+
+    { E_ENCODING = $MATCH }
+
+    :0 Ehf
+    *$ H ?? ^Content-Transfer-Encoding: +\/.+
+    { E_ENCODING = $MATCH }
+}
+
+
+# Now, we do decoding here.....
+#
+
+:0 hf
+{
+    str = $PM_ZH_BODY
+
+    :0
+    * E_ENCODING ?? quoted-printable
+    * E_CHARSET ?? big-?5
+    {
+	PM_ZH_BODY = ` echo "$PM_ZH_BODY" | $MME_QP | $CONV_B2U `
+    }
+
+    :0 E
+    * E_ENCODING ?? base64
+    * E_CHARSET ?? big-?5
+    {
+	PM_ZH_BODY = ` echo "$PM_ZH_BODY" | $MME_B64 | $CONV_B2U `
+    }
+
+    :0 E
+    * E_ENCODING ?? quoted-printable
+    * E_CHARSET ?? utf-?8
+    {
+	PM_ZH_BODY = ` echo "$PM_ZH_BODY" | $MME_QP `
+    }
+
+    :0 E
+    * E_ENCODING ?? base64
+    * E_CHARSET ?? utf-?8
+    {
+	PM_ZH_BODY = ` echo "$PM_ZH_BODY" | $MME_B64 `
+    }
+    
+    :0 E
+    * E_ENCODING ?? quoted-printable
+    * E_CHARSET ?? gb2312-?.*
+    {
+	PM_ZH_BODY = ` echo "$PM_ZH_BODY" | $MME_QP | $CONV_G2U`
+    }
+
+    :0 E
+    * E_ENCODING ?? base64
+    * E_CHARSET ?? gb2312-?.*
+    {
+	PM_ZH_BODY = ` echo "$PM_ZH_BODY" | $MME_B64 | $CONV_G2U `
+    }
+
+# http://billharlan.com/pub/papers/Bourne_shell_idioms.html
+# test continuous 3 escape words
+#    :0 hf
+#    *$ B ?? &#x${ALNUM}+;&#x${ALNUM}+;&#x${ALNUM}+;
+#    {
+#	PM_ZH_BODY = ` echo "$PM_ZH_BODY" | /usr/local/bin/perl -C -pe 's/&\#(\d+);/chr($1)/ge;s/&\#x([a-fA-F\d]+);/chr(hex($1))/ge;' `
+#    }
+}
+
