@@ -12,7 +12,7 @@
 #   Documentation
 #
 #       If your system do not have ``w3m'', but you still want to use this 
-#       module degressivily, you can set the PM_ZH_USE_W3M to disable 
+#       module digressively, you can set the PM_ZH_USE_W3M to disable 
 #       ``w3m'', but words in mail body that encoded in url-encode or escaped 
 #       hexadecimal will not be processed.
 #
@@ -22,11 +22,11 @@
 #           PM_ZH_USE_W3M = "no"
 #
 #      All the return values described below are encoded in UTF-8, so I 
-#      recommand you also save your .procmailrc in UTF-8 format.
+#      recommend you also save your .procmailrc in UTF-8 format.
 #
 #   Required settings
 #
-#       In your .procmailrc config file, make sure the binany tool mentioned 
+#       In your .procmailrc config file, make sure the binary tool mentioned 
 #       above can be found in the ${PATH} environment.
 #
 #   Call arguments (variables to set before calling)
@@ -53,11 +53,11 @@
 #       PATH = /bin:/usr/bin:/usr/local/bin
 #       # if you don't have ``w3m'', uncomment the following line
 #       # PM_ZH_USE_W3M = "no"
-#	INCLUDERC = /absolute/path/to/pm-zh-decode.rc
+#       INCLUDERC = /absolute/path/to/pm-zh-decode.rc
 #
 #       # filter the mail to 'spam' folder if mail body has the string '賺錢'
-#	:0
-#	* PM_ZH_BODY ?? 賺錢
+#       :0
+#       * PM_ZH_BODY ?? 賺錢
 #       spam
 #
 #   Known issues
@@ -65,25 +65,22 @@
 #       There is some problem when procmail do long string processing in 
 #       back-quotes(`), so we can just do the extracting command in one time.
 #
-#       Environment variable assignment may some time not work normally 
-#       caused by procmail either.
+#       Environment variable assignment may sometime not work normally caused 
+#       by procmail either.
 #
 #   Change Log
 #
 #       2012-05-04
-#           create module.
+#           Create module.
 #
 #       2012-05-07
-#           rewrite parsing procedure, use w3m
+#           Rewrite parsing procedure, use w3m.
 #
 #
 
 #
 # Program Settings
 # ===========================================
-
-# INCLUDERC = $PMSRC/pm-jamime.rc
-# INCLUDERC = $PMSRC/pm-jamime-decode.rc
 
 FORMAIL		= ${FORMAIL:-'formail'}
 
@@ -120,28 +117,29 @@ E_ENCODING = "7-bit"
 
 HAS_HTML_CONTENT = "no"
 
-:0 hf
+:0
 * HB ?? ^Content-Type:
 {
     # CHARSET
-    :0 hf
+    :0
     *$ B ?? ^(Content-Type:.*|	)charset *= *\"?\/[^\";]+
     { E_CHARSET = $MATCH }
 
-    :0 Ehf
+    :0 E
     *$ H ?? ^(Content-Type:.*|	)charset *= *\"?\/[^\";]+
     { E_CHARSET = $MATCH }
 
     # ENCODING
-    :0 hf
+    :0
     *$ B ?? ^Content-Transfer-Encoding: +\/.+
     { E_ENCODING = $MATCH }
 
-    :0 Ehf
+    :0 E
     *$ H ?? ^Content-Transfer-Encoding: +\/.+
     { E_ENCODING = $MATCH }
 
-    :0 hf
+    # html content processing
+    :0
     * B ?? ^Content-Type: *text/html;^?( |	)*charset *= *\"?\/[^\";]+
     {
 	HAS_HTML_CONTENT = "yes"
@@ -153,21 +151,14 @@ HAS_HTML_CONTENT = "no"
 # Decoding method assignment
 # ===========================================
 
-# default filter
-F_CHARSET = 'cat'
-F_ENCODING = 'cat'
-F_HTML = 'cat'
-
-:0 hf
+:0
 {
-    :0
-    * E_ENCODING ?? quoted-printable
-    { F_ENCODING = $MME_QP }
+    # default filter
+    F_CHARSET = 'cat'
+    F_ENCODING = 'cat'
+    F_HTML = 'cat'
 
-    :0 E
-    * E_ENCODING ?? base64
-    { F_ENCODING = $MME_B64 }
-
+    # CHARSET
     :0
     * E_CHARSET ?? big-?5
     { F_CHARSET = $CONV_B2U }
@@ -176,6 +167,16 @@ F_HTML = 'cat'
     * E_CHARSET ?? gb2312-?.*
     { F_CHARSET = $CONV_G2U }
 
+    # ENCODINg
+    :0
+    * E_ENCODING ?? quoted-printable
+    { F_ENCODING = $MME_QP }
+
+    :0 E
+    * E_ENCODING ?? base64
+    { F_ENCODING = $MME_B64 }
+
+    # html content processing
     :0
     * ! PM_ZH_USE_W3M ?? no
     * HAS_HTML_CONTENT ?? yes
@@ -199,5 +200,5 @@ F_HTML = 'cat'
 # We extract the mail BODY here
 # NOTE: any space is NOT allowed between ``variable'' and ``='' here, it's a special usage excluding environment variable assignmnet
 
-:0 f
+:0 fW
 PM_ZH_BODY= | $FORMAIL -I "" | awk ' ! /^--[a-zA-Z0-9\-="._:]+$/ && ! /^Content-[DT]/ && ! /^\tcharset=/ && ! /^\tboundary=/  {print}' | $F_ENCODING | $F_HTML | $F_CHARSET | tr -d \\n
