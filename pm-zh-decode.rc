@@ -5,7 +5,6 @@
 #       You should install the following binary tools in your system:
 #           procmail    (Obviously!)
 #           formail     (usually comes with procmail)
-#           perl        (may be replaced by ``awk'')
 #           mmencode    (may be ``mimencode'' in some system)
 #           w3m         (with M17N support)
 #           piconv      (iconv written in Perl, you can use ``iconv'' instead)
@@ -184,4 +183,4 @@ F_HTML = 'cat'
 # NOTE: any space is NOT allowed between ``variable'' and ``='' here, it's a special usage excluding environment variable assignmnet
 
 :0 f
-PM_ZH_BODY= | $FORMAIL -I "" | perl -ne 'next if /^--[-.=:"a-zA-Z0-9]*$/; next if /^Content-/; next if /\tcharset=/; next if /^\tboundary=/; print;' | $F_ENCODING | $F_HTML | $F_CHARSET | tr -d \\n
+PM_ZH_BODY= | $FORMAIL -I "" | awk ' ! /^--[a-zA-Z0-9\-="._:]+$/ && ! /^Content-[DT]/ && ! /^\tcharset=/ && ! /^\tboundary=/  {print}' | $F_ENCODING | $F_HTML | $F_CHARSET | tr -d \\n
