@@ -1,4 +1,71 @@
 # set syntax=procmail
+#
+#   Notes
+#
+#       You should install the following binary tools in your system:
+#           procmail    (Obviously!)
+#           formail     (usually comes with procmail)
+#           perl        (may be replaced by ``awk'')
+#           mmencode    (may be ``mimencode'' in some system)
+#           w3m         (with M17N support)
+#           piconv      (iconv written in Perl, you can use ``iconv'' instead)
+#
+#   Documentation
+#
+#       If your system do not have ``w3m'', but you still want to use this 
+#       module degressivily, you can set the PM_ZH_USE_W3M to disable 
+#       ``w3m'', but words in mail body that encoded in url-encode or escaped 
+#       hexadecimal will not be processed. The line below in your .procmailrc
+#       before include this module will diable ``w3m''
+#
+#           PM_ZH_USE_W3M = "no"
+#
+#      All the return values described below are encoded in UTF-8, so I 
+#      recommand you also save your .procmailrc in UTF-8 format.
+#
+#   Required settings
+#
+#       In your .procmailrc config file, make sure the binany tool mentioned 
+#       above can be found in the ${PATH} environment.
+#
+#   Call arguments (variables to set before calling)
+#
+#       (none)
+#
+#   Return values
+#
+#       o   PM_ZH_SUBJECT contains the Subject string from the header in UTF-8
+#       o   PM_ZH_STRIP_SUBJECT contains the Subject in UTF-8 without fake 
+#           characters.
+#       o   PM_ZH_FROM contains the From string from the header in UTF-8, 
+#           usually contains sender's name and e-mail address.
+#       o   PM_ZH_BODY contains the mail body content in UTF-8
+#       o   E_CHARSET contains the charset name used to decoded the mail body
+#       o   E_ENCODING contains the encoded name used to decoded the mail body
+#       o   HAS_HTML_CONTENT is "yes" if there is text/html section in mail 
+#           body.
+#       o   E_HTML_CHARSET contains the charset name used to decoded the 
+#           text/html section in mail body.
+#
+#   Examples
+#
+#	INCLUDERC = /absolute/path/to/pm-zh-decode.rc
+#
+#       # filter the mail to 'spam' folder if mail body has the string '賺錢'
+#	:0
+#	* PM_ZH_BODY ?? 賺錢
+#       spam
+#
+#   Change Log
+#
+#       2012-05-04
+#           create module.
+#
+#       2012-05-07
+#           rewrite parsing procedure, use w3m
+#
+#
+
 #########################
 # Program Settings	#
 #########################
@@ -6,51 +73,28 @@
 # INCLUDERC = $PMSRC/pm-jamime.rc
 # INCLUDERC = $PMSRC/pm-jamime-decode.rc
 
-FORMAIL		= ${FORMAIL:-"formail"}
+FORMAIL		= ${FORMAIL:-'formail'}
 
-MMENCODE	= ${MMENCODE:-"mmencode"}
-MME_QP		= ${MME_QP:-"$MMENCODE -u -q"}	# decode Quoted printable
-MME_B64		= ${MME_B64:-"$MMENCODE -u -b"}	# decode base64
+MME_QP		= ${MME_QP:-'mmencode -u -q'}	# decode Quoted printable
+MME_B64		= ${MME_B64:-'mmencode -u -b'}	# decode base64
 
-PICONV		= ${PICONV:-"piconv"}
-CONV_B2U	= ${CONV_B2U:-"$PICONV -f big5 -t utf8"}
-CONV_G2U	= ${CONV_G2U:-"$PICONV -f gb2312 -t utf8"}
-
-ALNUM = "[a-fA-F0-9]"
+CONV_B2U	= ${CONV_B2U:-'piconv -f big5 -t utf8'}
+CONV_G2U	= ${CONV_G2U:-'piconv -f gb2312 -t utf8'}
 
 #########################
 # Extract Fields	#
 #########################
 
-# decoding subject passed test for:
-#   =?big5?Q?
-#   =?Big5?B? 
-#   =?UTF-8?B?
-#   =?gb2312?B?
+# decoding subject, sender
 
-PM_ZH_SUBJECT = `formail -cxSubject: | /usr/local/bin/perl -MEncode -ne 'print encode("utf8", decode("MIME-Header", $_));'`
-PM_ZH_FROM = `formail -cxFrom: | /usr/local/bin/perl -MEncode -ne 'print encode("utf8", decode("MIME-Header", $_));'`
+PM_ZH_SUBJECT = `$FORMAIL -cxSubject: | /usr/local/bin/perl -MEncode -ne 'print encode("utf8", decode("MIME-Header", $_));'`
+PM_ZH_FROM = `$FORMAIL -cxFrom: | /usr/local/bin/perl -MEncode -ne 'print encode("utf8", decode("MIME-Header", $_));'`
 
-# ``hf'' flag example : just filter HEADER, bypass BODY
-#:0 hf
-#| cat		# cat -n
+# strip special characters 
+# long string reuse may failed, so we do it again. :~
+PM_ZH_STRIP_SUBJECT = `$FORMAIL -cxSubject: | /usr/local/bin/perl -MEncode -ne 'print encode("utf8", decode("MIME-Header", $_));' | sed 's/'"[-+~^|#\@!& ',;:?|.=_(){}<>\/]"/'''/g'`
 
-# We extract the mail BODY here
-# NOTE: any space is NOT allowed between ``variable'' and ``='' here, it's a special usage excluding environment variable assignmnet
 PM_ZH_BODY = ""
-
-:0 f
-PM_ZH_BODY=| formail -I "" | awk ' ! /^--[a-zA-Z0-9\-=._]+$/ && ! /^Content-[DT]/ && ! /^\tcharset=/ && ! /^\tboundary=/ && ! /^This is a multi-part message in MIME format\./ && ! /^MIME-Version: *[1-9.]+/ {print}' | tr -d \\n | tr -d \\r 
-
-# After parsing the mail BODY, we can remove any MIME header from it
-# NOTE: make sure not to put ``{print}'' in the start of line, the '{' symbol will cause a parsing error
-#PM_ZH_BODY= | $FORMAIL -I "" | awk '{print}'
-#	! /^--[a-zA-Z0-9\-=._]+$/ && \
-#	! /^Content-[DT]/ && \
-#	! /^\tcharset=/ && \
-#	! /^\tboundary=/ && \
-#	! /^This is a multi-part message in MIME format\./ && \
-#	! /^MIME-Version: *[1-9.]+/ {print}'
 
 # Now, we want to test if mail BODY has any Charset, Encoding settings...
 #
@@ -58,6 +102,8 @@ PM_ZH_BODY=| formail -I "" | awk ' ! /^--[a-zA-Z0-9\-=._]+$/ && ! /^Content-[DT]
 
 E_CHARSET = "iso-8859-1"
 E_ENCODING = "7-bit"
+
+HAS_HTML_CONTENT = "no"
 
 :0 hf
 * HB ?? ^Content-Type:
@@ -79,64 +125,63 @@ E_ENCODING = "7-bit"
     :0 Ehf
     *$ H ?? ^Content-Transfer-Encoding: +\/.+
     { E_ENCODING = $MATCH }
+
+    :0 hf
+    * B ?? ^Content-Type: *text/html;^?( |	)*charset *= *\"?\/[^\";]+
+    {
+	HAS_HTML_CONTENT = "yes"
+	E_HTML_CHARSET = $MATCH
+    }
 }
 
 
 # Now, we do decoding here.....
 #
 
+# default filter
+F_CHARSET = 'cat'
+F_ENCODING = 'cat'
+F_HTML = 'cat'
+
 :0 hf
 {
-    str = $PM_ZH_BODY
-
     :0
     * E_ENCODING ?? quoted-printable
+    { F_ENCODING = $MME_QP }
+
+    :0 E
+    * E_ENCODING ?? base64
+    { F_ENCODING = $MME_B64 }
+
+    :0
     * E_CHARSET ?? big-?5
-    {
-	PM_ZH_BODY = ` echo "$PM_ZH_BODY" | $MME_QP | $CONV_B2U `
-    }
+    { F_CHARSET = $CONV_B2U }
 
     :0 E
-    * E_ENCODING ?? base64
-    * E_CHARSET ?? big-?5
-    {
-	PM_ZH_BODY = ` echo "$PM_ZH_BODY" | $MME_B64 | $CONV_B2U `
-    }
-
-    :0 E
-    * E_ENCODING ?? quoted-printable
-    * E_CHARSET ?? utf-?8
-    {
-	PM_ZH_BODY = ` echo "$PM_ZH_BODY" | $MME_QP `
-    }
-
-    :0 E
-    * E_ENCODING ?? base64
-    * E_CHARSET ?? utf-?8
-    {
-	PM_ZH_BODY = ` echo "$PM_ZH_BODY" | $MME_B64 `
-    }
-    
-    :0 E
-    * E_ENCODING ?? quoted-printable
     * E_CHARSET ?? gb2312-?.*
-    {
-	PM_ZH_BODY = ` echo "$PM_ZH_BODY" | $MME_QP | $CONV_G2U`
-    }
+    { F_CHARSET = $CONV_G2U }
 
-    :0 E
-    * E_ENCODING ?? base64
-    * E_CHARSET ?? gb2312-?.*
+    :0
+    * ! PM_ZH_USE_W3M ?? no
+    * HAS_HTML_CONTENT ?? yes
     {
-	PM_ZH_BODY = ` echo "$PM_ZH_BODY" | $MME_B64 | $CONV_G2U `
-    }
+	:0
+	* E_HTML_CHARSET ?? big-?5
+	{ F_HTML = 'w3m -I big5 -O big5 -T text/html' }
 
-# http://billharlan.com/pub/papers/Bourne_shell_idioms.html
-# test continuous 3 escape words
-#    :0 hf
-#    *$ B ?? &#x${ALNUM}+;&#x${ALNUM}+;&#x${ALNUM}+;
-#    {
-#	PM_ZH_BODY = ` echo "$PM_ZH_BODY" | /usr/local/bin/perl -C -pe 's/&\#(\d+);/chr($1)/ge;s/&\#x([a-fA-F\d]+);/chr(hex($1))/ge;' `
-#    }
+	:0 E
+	* E_HTML_CHARSET ?? gb2312-?.*
+	{ F_HTML = 'w3m -I gb2312 -O gb2312 -T text/html' }
+
+	:0 E
+	* E_HTML_CHARSET ?? utf-?8
+	{ F_HTML = 'w3m -I utf8 -O utf8 -T text/html' }
+    }
 }
 
+# After parsing the mail BODY, we can remove any MIME header from it
+# We extract the mail BODY here
+# NOTE: any space is NOT allowed between ``variable'' and ``='' here, it's a special usage excluding environment variable assignmnet
+
+:0 f
+PM_ZH_BODY= | $FORMAIL -I "" | perl -ne 'next if /^--[-.=:"a-zA-Z0-9]*$/; next if /^Content-/; next if /\tcharset=/; next if /^\tboundary=/; print;' | $F_ENCODING | $F_HTML | $F_CHARSET | tr -d \\n

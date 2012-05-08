@@ -1,7 +1,14 @@
 zh-pm-lib
------------------------
+=======================
 
     A Chinese procmail module library.
+
+MODULE
+-----------------------
+
+* pm-zh-decode.rc
+
+	    Let you use Chinese words filter in your .procmailrc
 
 Reference:
 -----------------------
