@@ -8,7 +8,7 @@ MODULE
 
 * pm-zh-decode.rc
 
-	    Let you use Chinese words filter in your .procmailrc
+	    Let you use Chinese words filter in your `.procmailrc`
 
 Reference:
 -----------------------

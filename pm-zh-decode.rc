@@ -14,8 +14,10 @@
 #       If your system do not have ``w3m'', but you still want to use this 
 #       module degressivily, you can set the PM_ZH_USE_W3M to disable 
 #       ``w3m'', but words in mail body that encoded in url-encode or escaped 
-#       hexadecimal will not be processed. The line below in your .procmailrc
-#       before include this module will diable ``w3m''
+#       hexadecimal will not be processed.
+#
+#       You can disable w3m processing by putting the following line before 
+#       the INCLUDERC setting:
 #
 #           PM_ZH_USE_W3M = "no"
 #
@@ -48,12 +50,23 @@
 #
 #   Examples
 #
+#       PATH = /bin:/usr/bin:/usr/local/bin
+#       # if you don't have ``w3m'', uncomment the following line
+#       # PM_ZH_USE_W3M = "no"
 #	INCLUDERC = /absolute/path/to/pm-zh-decode.rc
 #
 #       # filter the mail to 'spam' folder if mail body has the string '賺錢'
 #	:0
 #	* PM_ZH_BODY ?? 賺錢
 #       spam
+#
+#   Known issues
+#
+#       There is some problem when procmail do long string processing in 
+#       back-quotes(`), so we can just do the extracting command in one time.
+#
+#       Environment variable assignment may some time not work normally 
+#       caused by procmail either.
 #
 #   Change Log
 #
@@ -65,9 +78,9 @@
 #
 #
 
-#########################
-# Program Settings	#
-#########################
+#
+# Program Settings
+# ===========================================
 
 # INCLUDERC = $PMSRC/pm-jamime.rc
 # INCLUDERC = $PMSRC/pm-jamime-decode.rc
@@ -80,9 +93,9 @@ MME_B64		= ${MME_B64:-'mmencode -u -b'}	# decode base64
 CONV_B2U	= ${CONV_B2U:-'piconv -f big5 -t utf8'}
 CONV_G2U	= ${CONV_G2U:-'piconv -f gb2312 -t utf8'}
 
-#########################
-# Extract Fields	#
-#########################
+#
+# Extract Fields
+# ===========================================
 
 # decoding subject, sender
 
@@ -95,10 +108,13 @@ PM_ZH_STRIP_SUBJECT = `$FORMAIL -cxSubject: | /usr/local/bin/perl -MEncode -ne '
 
 PM_ZH_BODY = ""
 
-# Now, we want to test if mail BODY has any Charset, Encoding settings...
 #
-# default charset, encoding
+# Charset, Encoding pasing
+# ===========================================
 
+# Now, we want to test if mail BODY has any Charset, Encoding settings...
+
+# default charset, encoding
 E_CHARSET = "iso-8859-1"
 E_ENCODING = "7-bit"
 
@@ -133,9 +149,9 @@ HAS_HTML_CONTENT = "no"
     }
 }
 
-
-# Now, we do decoding here.....
 #
+# Decoding method assignment
+# ===========================================
 
 # default filter
 F_CHARSET = 'cat'
@@ -178,6 +194,7 @@ F_HTML = 'cat'
     }
 }
 
+#
 # After parsing the mail BODY, we can remove any MIME header from it
 # We extract the mail BODY here
 # NOTE: any space is NOT allowed between ``variable'' and ``='' here, it's a special usage excluding environment variable assignmnet
