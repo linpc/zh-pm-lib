@@ -55,9 +55,13 @@
 #       # PM_ZH_USE_W3M = "no"
 #       INCLUDERC = /absolute/path/to/pm-zh-decode.rc
 #
-#       # filter the mail to 'spam' folder if mail body has the string '賺錢'
-#       :0
-#       * PM_ZH_BODY ?? 賺錢
+#       # filter the mail to 'spam' folder if mail body has any one of the 
+#       # string ['賺錢', '貸款', '免利息', '直銷']
+#       :0:
+#       * PM_ZH_BODY ?? (賺錢|\
+#       貸款|\
+#       免利息|\
+#       直銷)
 #       spam
 #
 #   Known issues
@@ -90,6 +94,9 @@ MME_B64		= ${MME_B64:-'mmencode -u -b'}	# decode base64
 CONV_B2U	= ${CONV_B2U:-'piconv -f big5 -t utf8'}
 CONV_G2U	= ${CONV_G2U:-'piconv -f gb2312 -t utf8'}
 
+# bumped the LINEBUF up to be large enough to hold string
+LINEBUF = 4096
+
 #
 # Extract Fields
 # ===========================================
@@ -101,7 +108,7 @@ PM_ZH_FROM = `$FORMAIL -cxFrom: | /usr/local/bin/perl -MEncode -ne 'print encode
 
 # strip special characters 
 # long string reuse may failed, so we do it again. :~
-PM_ZH_STRIP_SUBJECT = `$FORMAIL -cxSubject: | /usr/local/bin/perl -MEncode -ne 'print encode("utf8", decode("MIME-Header", $_));' | sed 's/'"[-+~^|#\@!& ',;:?|.=_(){}<>\/]"/'''/g'`
+PM_ZH_STRIP_SUBJECT = `$FORMAIL -cxSubject: | /usr/local/bin/perl -MEncode -ne 'print encode("utf8", decode("MIME-Header", $_));' | sed 's/'"[-+~^|#\@!& ',;:?|.=_(){}<>\/*%0-9]"/'''/g' | sed 's/\[//g' | sed 's/]//g' | sed 's/"//g'`
 
 PM_ZH_BODY = ""
 
@@ -167,7 +174,7 @@ HAS_HTML_CONTENT = "no"
     * E_CHARSET ?? gb2312-?.*
     { F_CHARSET = $CONV_G2U }
 
-    # ENCODINg
+    # ENCODING
     :0
     * E_ENCODING ?? quoted-printable
     { F_ENCODING = $MME_QP }
@@ -178,8 +185,8 @@ HAS_HTML_CONTENT = "no"
 
     # html content processing
     :0
-    * ! PM_ZH_USE_W3M ?? no
-    * HAS_HTML_CONTENT ?? yes
+    * ! PM_ZH_USE_W3M ?? ^^no^^
+    * HAS_HTML_CONTENT ?? ^^yes^^
     {
 	:0
 	* E_HTML_CHARSET ?? big-?5
