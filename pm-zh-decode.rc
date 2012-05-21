@@ -103,12 +103,12 @@ LINEBUF = 4096
 
 # decoding subject, sender
 
-PM_ZH_SUBJECT = `$FORMAIL -cxSubject: | /usr/local/bin/perl -MEncode -ne 'print encode("utf8", decode("MIME-Header", $_));'`
-PM_ZH_FROM = `$FORMAIL -cxFrom: | /usr/local/bin/perl -MEncode -ne 'print encode("utf8", decode("MIME-Header", $_));'`
+PM_ZH_SUBJECT = `$FORMAIL -cxSubject: | perl -MEncode -ne 'print encode("utf8", decode("MIME-Header", $_));'`
+PM_ZH_FROM = `$FORMAIL -cxFrom: | perl -MEncode -ne 'print encode("utf8", decode("MIME-Header", $_));'`
 
 # strip special characters 
 # long string reuse may failed, so we do it again. :~
-PM_ZH_STRIP_SUBJECT = `$FORMAIL -cxSubject: | /usr/local/bin/perl -MEncode -ne 'print encode("utf8", decode("MIME-Header", $_));' | sed 's/'"[-+~^|#\@!& ',;:?|.=_(){}<>\/*%0-9]"/'''/g' | sed 's/\[//g' | sed 's/]//g' | sed 's/"//g'`
+PM_ZH_STRIP_SUBJECT = `$FORMAIL -cxSubject: | perl -MEncode -ne 'print encode("utf8", decode("MIME-Header", $_));' | sed 's/'"[-+~^|#\@!& ',;:?|.=_(){}<>\/*%0-9]"/'''/g' | sed 's/\[//g' | sed 's/]//g' | sed 's/"//g'`
 
 PM_ZH_BODY = ""
 
