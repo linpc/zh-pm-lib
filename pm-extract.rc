@@ -1,0 +1,65 @@
+# set syntax=procmail
+#
+#   Notes
+#
+#       You should install the following binary tools in your system:
+#           procmail    (Obviously!)
+#           formail     (usually comes with procmail)
+#
+#   Documentation
+#
+#       (none)
+#
+#   Required settings
+#
+#       In your .procmailrc config file, make sure the binary tool mentioned 
+#       above can be found in the ${PATH} environment.
+#
+#   Call arguments (variables to set before calling)
+#
+#       (none)
+#
+#   Return values
+#
+#       o   PM_ORIG_SUBJECT contains the original Subject string without 
+#           "Subject: " prefix.
+#       o   PM_ORIG_FROM contains the original From string without 
+#           "From: " prefix.
+#       o   PM_ORIG_PATH contains the original Path string without
+#           "Path: " prefix. It's useful to block mails from unwanted MTA.
+#       o   PM_ORIG_BODY contains the original mail body.
+#
+#   Examples
+#
+#       PATH = /bin:/usr/bin:/usr/local/bin
+#       INCLUDERC = /absolute/path/to/pm-extract.rc
+#
+#   Known issues
+#
+#       (none)
+#
+#   Change Log
+#
+#       2012-05-27
+#           Create module.
+#
+
+#
+# Program Settings
+# ===========================================
+
+FORMAIL		= ${FORMAIL:-'formail'}
+
+# bumped the LINEBUF up to be large enough to hold string
+LINEBUF = 4096
+
+#
+# Extract Fields
+# ===========================================
+
+PM_ORIG_SUBJECT = `$FORMAIL -cxSubject:`
+PM_ORIG_FROM = `$FORMAIL -cxFrom:`
+PM_ORIG_PATH = `$FORMAIL -cxPath:`
+
+PM_ORIG_BODY = `$FORMAIL -I ""`
+
