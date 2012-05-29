@@ -3,11 +3,18 @@
 #   Notes
 #
 #       You should install the following binary tools in your system:
-#           procmail    (Obviously!)
-#           formail     (usually comes with procmail)
-#           mmencode    (may be ``mimencode'' in some system)
-#           w3m         (with M17N support)
-#           piconv      (iconv written in Perl, you can use ``iconv'' instead)
+#           procmail	    (Obviously!)
+#           formail	    (usually comes with procmail)
+#           mmencode	    (may be ``mimencode'' in some system)
+#           piconv	    (iconv written in Perl, you can use ``iconv'' 
+#                           instead)
+#           w3m		    (with M17N support)
+#
+#       Also make sure your system (or executing environment) has the 
+#       following Perl module:
+#           Encode          (The Perl encoding API)
+#           HTML::Entities  (Supports decoding to HTML entities)
+#                           If you do not have ``w3m'', install this.
 #
 #   Documentation
 #
@@ -20,9 +27,13 @@
 #       the INCLUDERC setting:
 #
 #           PM_ZH_USE_W3M = "no"
+#           PERL_SCRIPT	= '/absolute/path/to/w3.pl'
 #
-#      All the return values described below are encoded in UTF-8, so I 
-#      recommend you also save your .procmailrc in UTF-8 format.
+#       When turn off this option, you should make sure your system has the 
+#       Perl module ``HTML::Entities'' installed.
+#
+#       All the return values described below are encoded in UTF-8, so I 
+#       recommend you also save your .procmailrc in UTF-8 format.
 #
 #   Required settings
 #
@@ -93,6 +104,8 @@ MME_B64		= ${MME_B64:-'mmencode -u -b'}	# decode base64
 
 CONV_B2U	= ${CONV_B2U:-'piconv -f big5 -t utf8'}
 CONV_G2U	= ${CONV_G2U:-'piconv -f gb2312 -t utf8'}
+
+PERL_SCRIPT	= '/tmp/w3.pl'
 
 # bumped the LINEBUF up to be large enough to hold string
 LINEBUF = 4096
@@ -200,7 +213,18 @@ HAS_HTML_CONTENT = "no"
 	* E_HTML_CHARSET ?? utf-?8
 	{ F_HTML = 'w3m -I utf8 -O utf8 -T text/html' }
     }
+
+    # Experimental: 
+    # do not have w3m, use alternate Perl module to solve it.
+    :0 E
+    * HAS_HTML_CONTENT ?? ^^yes^^
+    {
+	:0
+	* E_HTML_CHARSET ?? utf-?8
+	{ F_HTML = $PERL_SCRIPT }
+    }
 }
+
 
 #
 # After parsing the mail BODY, we can remove any MIME header from it
